@@ -5,24 +5,27 @@
 # (C) Stanislav Yudin (CityAceE)
 # http://zx-pk.ru
 #
-# ver.0.1 December 2018
+# ver.0.2 December 2018
 
 import pygame
 
-import z80
+import i8080 as cpu
 import spyc_screen
 import spyc_loader
 import spyc_keyboard
 
 
 GAME = 'zoo.rks'
+
 ROM = 'system.rom'
 
 INT_TICKS = 69888  # Ticks number between two interrupts
 
-z80.pc = spyc_loader.game(GAME)
+cpu.pc = spyc_loader.game(GAME)
 spyc_loader.rom(ROM, 0xc000)
-z80.pc = 0xc000
+cpu.pc = 0xc000
+
+cpu.sp = 0x7FFF
 
 debug = False
 running = True
@@ -32,17 +35,17 @@ try:
         # START OF MAIN LOOP
 
         # # FOR DEBUGGING
-        # if (z80.pc == 0x1973) and (z80.reg_h == 0x3d) and (z80.reg_l == 0xf8):  # Trap conditions
+        # if (cpu.pc == 0xc1ff):  # and (cpu.reg_h == 0x3d) and (cpu.reg_l == 0xf8):  # Trap conditions
         #     debug = True
-        #     print('PC:', hex(z80.pc))
+        #     # print('PC:', hex(cpu.pc))
         #     pass
         # if debug:
-        #     spyc_screen.update()
-        #     z80.display_regs()  # Set breakpoint here
+        #     # spyc_screen.update()
+        #     cpu.display_regs()  # Set breakpoint here
 
-        z80.core()
-        if z80.ticks > INT_TICKS:
-            z80.ticks = 0
+        cpu.core()
+        if cpu.ticks > INT_TICKS:
+            cpu.ticks = 0
             spyc_screen.update()
         # END OF MAIN LOOP
 

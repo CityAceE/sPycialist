@@ -6,7 +6,7 @@
 # http://zx-pk.ru
 
 import pygame
-import z80
+import i8080 as cpu
 
 SCREEN_WIDTH = 384
 SCREEN_HEIGHT = 256
@@ -44,6 +44,6 @@ def update():
     for coord_x in range(0, 384, 8):
         for coord_y in range(256):
             for i in range(8):
-                screen.set_at((coord_x + i, coord_y), table_byte[z80.memory[VIDEO_RAM + byte_number]][i])
+                screen.set_at((coord_x + i, coord_y), table_byte[cpu.memory[VIDEO_RAM + byte_number]][i])
             byte_number += 1
     pygame.display.flip()

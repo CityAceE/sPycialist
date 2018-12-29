@@ -5,14 +5,14 @@
 # (C) Stanislav Yudin (CityAceE)
 # http://zx-pk.ru
 
-import z80
+import i8080 as cpu
 
-ports = [0xff, 0xff, 0x0f, 0xff]
+ports = bytearray([0xff, 0xff, 0x0f, 0xff])
 for i in range(0, 2048, 4):
-    z80.memory[0xf800 + i:0xf804 + i] = ports[0:4]
+    cpu.memory[0xf800 + i:0xf804 + i] = ports[0:4]
 
 keys = {
-    # Key  [   C O L U M N    ] [  R O W  ]
+  # Key  [   C O L U M N    ] [  R O W  ]
     282: [0b1000, 0b00000000, 0b10000000],  # F - F1
     283: [0b0100, 0b00000000, 0b10000000],  # HELP - F2
     284: [0b0010, 0b00000000, 0b10000000],  # NEW - F3
@@ -96,27 +96,28 @@ keys = {
 
 
 def fill_matrix():
-    if z80.vv55a_mode == 0x91:
+    if cpu.vv55a_mode == 0x91:
         for i in range(0, 2048, 4):
-            z80.memory[0xf800 + i:0xf804 + i] = z80.ports_91[0:4]
+            cpu.memory[0xf800 + i:0xf804 + i] = cpu.ports_91[0:4]
 
-    if z80.vv55a_mode == 0x82:
+    if cpu.vv55a_mode == 0x82:
         for i in range(0, 2048, 4):
-            z80.memory[0xf800 + i:0xf804 + i] = z80.ports_82[0:4]
+            cpu.memory[0xf800 + i:0xf804 + i] = cpu.ports_82[0:4]
 
 
 def keydown(code):
     if code in keys:
-        z80.ports_91[2] &= 255 - keys[code][0]
-        z80.ports_91[0] &= 255 - keys[code][1]
-        z80.ports_82[1] &= 255 - keys[code][2]
+        cpu.ports_91[2] &= 255 - keys[code][0]
+        cpu.ports_91[0] &= 255 - keys[code][1]
+        cpu.ports_82[1] &= 255 - keys[code][2]
         fill_matrix()
-    # print('Key pressed :', z80.disp4b(0xff00), z80.dec2hex8(z80.vv55a_mode), code)
+    # print('Key pressed :', cpu.disp4b(0xff00), cpu.dec2hex8(cpu.vv55a_mode), code)
+
 
 def keyup(code):
     if code in keys:
-        z80.ports_91[2] |= keys[code][0]
-        z80.ports_91[0] |= keys[code][1]
-        z80.ports_82[1] |= keys[code][2]
-        fill_matrix()
-    # print('Key released:', z80.disp4b(0xff00), z80.dec2hex8(z80.vv55a_mode), code)
+        cpu.ports_91[2] |= keys[code][0]
+        cpu.ports_91[0] |= keys[code][1]
+        cpu.ports_82[1] |= keys[code][2]
+        # fill_matrix()
+    # print('Key released:', cpu.disp4b(0xff00), cpu.dec2hex8(cpu.vv55a_mode), code)
