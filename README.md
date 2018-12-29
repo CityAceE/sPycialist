@@ -38,3 +38,11 @@ To load another game put RKS file beside emulator files then change GAME constan
 
 ![ZOO](https://pic.maxiol.com/images/1545017987.3254906935.zoo.gif "ZOO Game") ![Gold](https://pic.maxiol.com/images/1545805702.3254906935.gold.gif "Gold Game")<br>
 ![Chess](https://pic.maxiol.com/images/1545567716.90463878.chess.png "Chess") ![Basic](https://pic.maxiol.com/images/1545798471.3254906935.chessbasic.png "Basic")
+
+## Versions
+
+v0.1 (26th December, 2018)
+- Initial release
+
+v0.2 (29th December, 2018)
+- a lot of code optimization for speed up
