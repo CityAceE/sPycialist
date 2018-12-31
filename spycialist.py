@@ -5,21 +5,19 @@
 # (C) Stanislav Yudin (CityAceE)
 # http://zx-pk.ru
 #
-# ver.0.2 December 2018
+# ver.0.3, 31st December 2018
 
 import pygame
 
 import i8080 as cpu
-import spyc_screen
 import spyc_loader
 import spyc_keyboard
-
 
 GAME = 'zoo.rks'
 
 ROM = 'system.rom'
 
-INT_TICKS = 69888  # Ticks number between two interrupts
+INT_TICKS = 40000  # Ticks number between two interrupts
 
 cpu.pc = spyc_loader.game(GAME)
 spyc_loader.rom(ROM, 0xc000)
@@ -40,13 +38,15 @@ try:
         #     # print('PC:', hex(cpu.pc))
         #     pass
         # if debug:
-        #     # spyc_screen.update()
+        #     # cpu.pygame.display.flip()
         #     cpu.display_regs()  # Set breakpoint here
 
         cpu.core()
         if cpu.ticks > INT_TICKS:
             cpu.ticks = 0
-            spyc_screen.update()
+            if cpu.scr_upd:
+                cpu.pygame.display.flip()
+                cpu.scr_upd = False
         # END OF MAIN LOOP
 
         for event in pygame.event.get():
