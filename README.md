@@ -35,10 +35,10 @@ To load another game put RKS file beside emulator files then change GAME constan
 
 ## Thanks (in alphabetical order)
 
-ivagor
-Q-Master
-[svofski](https://github.com/svofski "svofski")
-Titus
+* ivagor
+* Q-Master
+* [svofski](https://github.com/svofski "svofski")
+* Titus
 
 ## Screenshots
 
