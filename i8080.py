@@ -5,72 +5,33 @@
 # (C) Stanislav Yudin (CityAceE)
 # http://zx-pk.ru
 
-import pygame
+import spyc_keyboard
+
 
 memory = memoryview(bytearray(65536))
 
-# SPECIALIST
-
-SCREEN_WIDTH = 384
-SCREEN_HEIGHT = 256
-
-scr_upd = True
-
-table_byte = []
-for pix in range(256):
-    pix_group = [0, 0, 0, 0, 0, 0, 0, 0]
-    if pix & 0b00000001:
-        pix_group[7] = 255
-    if pix & 0b00000010:
-        pix_group[6] = 255
-    if pix & 0b00000100:
-        pix_group[5] = 255
-    if pix & 0b00001000:
-        pix_group[4] = 255
-    if pix & 0b00010000:
-        pix_group[3] = 255
-    if pix & 0b00100000:
-        pix_group[2] = 255
-    if pix & 0b01000000:
-        pix_group[1] = 255
-    if pix & 0b10000000:
-        pix_group[0] = 255
-    table_byte.append(pix_group)
-
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 8)
-pygame.display.set_caption("sPycialist")
-pygame.display.flip()
-
-vv55a_mode = 0x82
-ports_91 = bytearray([0xff, 0x00, 0x0f, 0x00])
-ports_82 = bytearray([0x00, 0xff, 0x00, 0xff])
-
-# Intel 8080
-
-ticks = 0
-
+ticks = 0  # Ticks number since interrupt
 pc = 0  # Program counter
 sp = 0  # Stack pointer
 
-reg_af_mv = memoryview(bytearray(2))
-reg_a = reg_af_mv[1:2]
-reg_f = reg_af_mv[0:1]
-reg_af = reg_af_mv.cast('H')
+regfile = bytearray(8)
+regfile_mv = memoryview(regfile)
+reg_b = regfile_mv[1:2]
+reg_c = regfile_mv[0:1]
+reg_d = regfile_mv[3:4]
+reg_e = regfile_mv[2:3]
+reg_h = regfile_mv[5:6]
+reg_l = regfile_mv[4:5]
+reg_f = regfile_mv[7:8]
+reg_a = regfile_mv[6:7]
 
-reg_bc_mv = memoryview(bytearray(2))
-reg_b = reg_bc_mv[1:2]
-reg_c = reg_bc_mv[0:1]
-reg_bc = reg_bc_mv.cast('H')
+reg_bc = regfile_mv[0:2].cast('H')
+reg_de = regfile_mv[2:4].cast('H')
+reg_hl = regfile_mv[4:6].cast('H')
+reg_af = regfile_mv[6:8].cast('H')
 
-reg_de_mv = memoryview(bytearray(2))
-reg_d = reg_de_mv[1:2]
-reg_e = reg_de_mv[0:1]
-reg_de = reg_de_mv.cast('H')
-
-reg_hl_mv = memoryview(bytearray(2))
-reg_h = reg_hl_mv[1:2]
-reg_l = reg_hl_mv[0:1]
-reg_hl = reg_hl_mv.cast('H')
+reg_list = memoryview(regfile)
+rp_list = memoryview(regfile).cast('H')
 
 # Flags
 flag_c = False  # 0 carry
@@ -78,10 +39,6 @@ flag_p = False  # 2 parity
 flag_h = False  # 4 half-carry
 flag_z = False  # 6 zero
 flag_s = False  # 7 sign
-
-regs_lst = ('reg_b', 'reg_c', 'reg_d', 'reg_e', 'reg_h', 'reg_l', '', 'reg_a')
-regs_pairs = ('reg_bc', 'reg_de', 'reg_hl', 'sp')
-conditions = ('flag_z', 'flag_c', 'flag_p', 'flag_s')
 
 # Parity table for parity flag setting
 p_table = [False] * 256
@@ -94,6 +51,41 @@ for i in range(256):
 
 h_table = (False, False, True, False, True, False, True, True)
 sub_h_table = (False, True, True, True, False, False, False, True)
+
+def write_mem(addr, byte):
+    # Write one byte to memory address
+    # ROM write blocking and memory mapping here
+
+    # Specialist ROM block writing
+    if addr < 0xc000:
+        memory[addr] = byte
+
+    # Specialist keyboard ports writing
+    if 0xf7ff < addr <= 0xffff:
+        spyc_keyboard.write_kb_ports(addr, byte)
+
+
+def read_mem(addr):
+    # Read one byte from memory address
+    # Configure memory mapping here
+
+    # Specialist keyboard reading
+    if addr < 0xf800:
+        return memory[addr]
+    else:
+        return spyc_keyboard.read_kb_ports(addr)
+
+
+def write_port(port, byte):
+    # Write one byte to XXXX port
+    print('Send %s to %s port' % (hex(byte), hex(port)))
+    return
+
+
+def read_port(port):
+    # Read one byte from XXXX port
+    print('Read %s port' % hex(port))
+    return 0
 
 
 def flags2f():
@@ -157,6 +149,10 @@ def display_regs():
     print('SP:', dec2hex16(sp), disp4b(sp), '\tAC =', int(flag_h))
     print('PC:', dec2hex16(pc), disp4b(pc))
     print()
+
+
+def get_conditions(n):
+    return [flag_z, flag_c, flag_p, flag_s][n]
 
 
 def byte_signed(a):
@@ -261,92 +257,6 @@ def sbc_a(reg):
     return
 
 
-def byte2mem(addr, byte):
-    # Write one byte to memory address
-    # ROM write blocking and memory mapping here
-    global memory
-
-    # # ZX Spectrum ROM block writing
-    # if addr > 0x3fff:
-    #     memory[addr] = byte
-
-    # Specialist ROM block writing and VV55A ports
-    global vv55a_mode
-
-    if addr < 0xc000:
-        memory[addr] = byte
-
-    if 0xf7ff < addr <= 0xffff:
-        # # For Ryumik test of Specialist
-        # if ((addr & 0b11) == 0) and (byte == 0x82):
-        #     ports = ports_82[:]
-        #     ports[0] = byte
-        #     for i in range(0, 2048, 4):
-        #         memory[0xf800 + i:0xf804 + i] = ports[0:4]
-        #
-        # if ((addr & 0b11) == 2) and (byte == 0x82):
-        #     ports = ports_82[:]
-        #     ports[2] = byte
-        #     for i in range(0, 2048, 4):
-        #         memory[0xf800 + i:0xf804 + i] = ports[0:4]
-        #
-        # if ((addr & 0b11) == 1) and (byte == 0x91):
-        #     ports = ports_91[:]
-        #     ports[1] = byte
-        #     for i in range(0, 2048, 4):
-        #         memory[0xf800 + i:0xf804 + i] = ports[0:4]
-        #
-        # if ((addr & 0b11) == 2) and (byte == 0x91):
-        #     ports = ports_91[:]
-        #     ports[2] = (ports_91[2] % 0x10) | (byte & 0xf0)
-        #     for i in range(0, 2048, 4):
-        #         memory[0xf800 + i:0xf804 + i] = ports[0:4]
-
-        # print(hex(memory[0xf800]), hex(memory[0xf801]), hex(memory[0xf802]), hex(memory[0xf803]))
-
-        # Main emulation
-        if ((addr & 0b11) == 3) and (byte == 0x91):
-            vv55a_mode = byte
-            for i in range(0, 2048, 4):
-                memory[0xf800 + i:0xf804 + i] = ports_91[0:4]
-
-        if ((addr & 0b11) == 3) and (byte == 0x82):
-            vv55a_mode = byte
-            for i in range(0, 2048, 4):
-                memory[0xf800 + i:0xf804 + i] = ports_82[0:4]
-
-    # Write to videoRAM
-    if 0x8fff < addr < 0xc000:
-        global scr_upd
-        scr_upd = True
-        coord_x = (addr - 0x9000 & 0x3f00) // 32
-        coord_y = addr % 256
-        for i in range(8):
-            screen.set_at((coord_x + i, coord_y), table_byte[byte][i])
-
-def read_mem(addr):
-    # Read one byte from memory address
-    # Configure memory mapping here
-    global memory
-    # # Specialist
-    # if 0xf7ff < addr <= 0xffff:
-    #     pass
-    #     # print(dec2hex16(pc), dec2hex8(vv55a_mode), dec2hex16(addr), memory[0xff00:0xff04])
-    return memory[addr]
-
-
-def byte2port(port, byte):
-    # Write one byte to XXXX port
-    print('Send %s to %s port' % (hex(byte), hex(port)))
-    return
-
-
-def read_port(port):
-    # Read one byte from XXXX port
-    print('Read %s port' % hex(port))
-    return 0
-
-
 def inc_pc(inc=1):
     # PC increment
     return (pc + inc) % 0x10000
@@ -385,7 +295,8 @@ def b00000000():  # NOP / NOP
 
 def b00000001():  # LD RP,nn / LXI R,nn
     global pc, ticks
-    globals()[regs_pairs[(opcode & 0b110000) >> 4]][0] = read_mem(inc_pc()) + read_mem(inc_pc(2)) * 256
+    rp_list[(opcode & 0b110000) >> 4] = read_mem(inc_pc()) + read_mem(inc_pc(2)) * 256
+
     pc = inc_pc(3)
     ticks += 10
     return
@@ -401,7 +312,7 @@ def b00110001():  # LD SP,nn / LXI SP,nn
 
 def b00001001():  # ADD HL,RP / DAD R
     global pc, ticks, flag_c
-    reg_temp = reg_hl[0] + globals()[regs_pairs[(opcode & 0b110000) >> 4]][0]
+    reg_temp = reg_hl[0] + rp_list[(opcode & 0b110000) >> 4]
     flag_c = bool(reg_temp & 0x10000)
     reg_hl[0] = reg_temp % 0x10000
     pc = inc_pc()
@@ -421,7 +332,7 @@ def b00111001():  # ADD HL,SP / DAD SP
 
 def b00010010():  # LD (DE),A / STAX D
     global pc, ticks
-    byte2mem(reg_de[0], reg_a[0])
+    write_mem(reg_de[0], reg_a[0])
     pc = inc_pc()
     ticks += 7
     return
@@ -429,7 +340,7 @@ def b00010010():  # LD (DE),A / STAX D
 
 def b00000010():  # LD (BC),A / STAX B
     global pc, ticks
-    byte2mem(reg_bc[0], reg_a[0])
+    write_mem(reg_bc[0], reg_a[0])
     pc = inc_pc()
     ticks += 7
     return
@@ -453,8 +364,8 @@ def b00001010():  # LD A,(BC) / LDAX B
 
 def b00100010():  # LD (nn),HL / SHLD nn
     global pc, ticks
-    byte2mem(read_mem(inc_pc(2)) * 256 + read_mem(inc_pc()), reg_l[0])
-    byte2mem((read_mem(inc_pc(2)) * 256 + read_mem(inc_pc()) + 1) % 0x10000, reg_h[0])
+    write_mem(read_mem(inc_pc(2)) * 256 + read_mem(inc_pc()), reg_l[0])
+    write_mem((read_mem(inc_pc(2)) * 256 + read_mem(inc_pc()) + 1) % 0x10000, reg_h[0])
     pc = inc_pc(3)
     ticks += 16
     return
@@ -471,7 +382,7 @@ def b00101010():  # LD HL,(nn) / LHLD nn
 
 def b00110010():  # LD (nn),A / STA nn
     global pc, ticks
-    byte2mem(read_mem(inc_pc(2)) * 256 + read_mem(inc_pc()), reg_a[0])
+    write_mem(read_mem(inc_pc(2)) * 256 + read_mem(inc_pc()), reg_a[0])
     pc = inc_pc(3)
     ticks += 13
     return
@@ -488,7 +399,7 @@ def b00111010():  # LD A,(nn) / LDA nn
 def b00000011():  # INC RP / INX R
     global pc, ticks
     index = (opcode & 0b110000) >> 4
-    globals()[regs_pairs[index]][0] = (globals()[regs_pairs[index]][0] + 1) % 0x10000
+    rp_list[index] = (rp_list[index] + 1) % 0x10000
     pc = inc_pc()
     ticks += 5
     return
@@ -505,7 +416,7 @@ def b00110011():  # INC SP / INX SP
 def b00001011():  # DEC RP / DCX R
     global pc, ticks
     index = (opcode & 0b110000) >> 4
-    globals()[regs_pairs[index]][0] = (globals()[regs_pairs[index]][0] - 1) % 0x10000
+    rp_list[index] = (rp_list[index] - 1) % 0x10000
     pc = inc_pc()
     ticks += 6
     return
@@ -521,7 +432,7 @@ def b00111011():  # DEC SP / DCX SP
 
 def b00110100():  # INC (HL) / INR M
     global pc, ticks
-    byte2mem(reg_hl[0], inc_reg(read_mem(reg_hl[0])))
+    write_mem(reg_hl[0], inc_reg(read_mem(reg_hl[0])))
     ticks += 10
     pc = inc_pc()
     return
@@ -529,8 +440,8 @@ def b00110100():  # INC (HL) / INR M
 
 def b00000100():  # INC SSS / INR S
     global pc, ticks
-    index = (opcode & 0b111000) >> 3
-    globals()[regs_lst[index]][0] = inc_reg(globals()[regs_lst[index]][0])
+    index = 1 ^ (opcode % 0b1000000) >> 3
+    reg_list[index] = inc_reg(reg_list[index])
     ticks += 5
     pc = inc_pc()
     return
@@ -538,7 +449,7 @@ def b00000100():  # INC SSS / INR S
 
 def b00110101():  # DEC (HL) / DCR M
     global pc, ticks
-    byte2mem(reg_hl[0], dec_reg(read_mem(reg_hl[0])))
+    write_mem(reg_hl[0], dec_reg(read_mem(reg_hl[0])))
     ticks += 10
     pc = inc_pc()
     return
@@ -546,8 +457,8 @@ def b00110101():  # DEC (HL) / DCR M
 
 def b00000101():  # DEC SSS / DCR S
     global pc, ticks
-    index = regs_lst[(opcode & 0b111000) >> 3]
-    globals()[index][0] = dec_reg(globals()[index][0])
+    index = 1 ^ (opcode % 0b1000000) >> 3
+    reg_list[index] = dec_reg(reg_list[index])
     ticks += 5
     pc = inc_pc()
     return
@@ -555,7 +466,7 @@ def b00000101():  # DEC SSS / DCR S
 
 def b00110110():  # LD (HL),d / MVI M,d
     global pc, ticks
-    byte2mem(reg_h[0] * 256 + reg_l[0], read_mem(inc_pc()))
+    write_mem(reg_h[0] * 256 + reg_l[0], read_mem(inc_pc()))
     ticks += 10
     pc = inc_pc(2)
     return
@@ -563,7 +474,8 @@ def b00110110():  # LD (HL),d / MVI M,d
 
 def b00000110():  # LD DDD,d / MVI D,d
     global pc, ticks
-    globals()[regs_lst[(opcode & 0b111000) >> 3]][0] = read_mem(inc_pc())
+    index = 1 ^ (opcode % 0b1000000) >> 3
+    reg_list[index] = read_mem(inc_pc())
     ticks += 7
     pc = inc_pc(2)
     return
@@ -602,7 +514,7 @@ def b00010111():  # RLA / RAL
 
 
 def b00011111():  # RRA / RAR
-    global pc, ticks,flag_c
+    global pc, ticks, flag_c
     flag_temp = bool(reg_a[0] & 1)
     reg_a[0] = reg_a[0] >> 1 | flag_c << 7
     flag_c = flag_temp
@@ -662,7 +574,7 @@ def b01110110():  # HALT / HLT
 
 def b01000110():  # LD DDD,(HL) / MOV D,M
     global pc, ticks
-    globals()[regs_lst[(opcode & 0b111000) >> 3]][0] = read_mem(reg_hl[0])
+    reg_list[1 ^ (opcode % 0b1000000) >> 3] = read_mem(reg_hl[0])
     pc = inc_pc()
     ticks += 7
     return
@@ -670,7 +582,7 @@ def b01000110():  # LD DDD,(HL) / MOV D,M
 
 def b01110000():  # LD (HL),SSS / MOV M,S
     global pc, ticks
-    byte2mem(reg_hl[0], globals()[regs_lst[opcode & 0b111]][0])
+    write_mem(reg_hl[0], reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 7
     return
@@ -678,7 +590,7 @@ def b01110000():  # LD (HL),SSS / MOV M,S
 
 def b01000000():  # LD DDD,SSS / MOV D,S
     global pc, ticks
-    globals()[regs_lst[(opcode & 0b111000) >> 3]][0] = globals()[regs_lst[opcode & 0b111]][0]
+    reg_list[1 ^ (opcode % 0b1000000) >> 3] = reg_list[1 ^ (opcode % 0b1000)]
     pc = inc_pc()
     ticks += 5
     return
@@ -696,7 +608,7 @@ def b10000110():  # ADD A,(HL) / ADD M
 
 def b10000000():  # ADD A,SSS / ADD S
     global pc, ticks
-    add_a(globals()[regs_lst[opcode & 0b111]][0])
+    add_a(reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 4
     return
@@ -712,7 +624,7 @@ def b10001110():  # ADC A,(HL) / ADC M
 
 def b10001000():  # ADC A,SSS / ADC S
     global pc, ticks
-    adc_a(globals()[regs_lst[opcode & 0b111]][0])
+    adc_a(reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 4
     return
@@ -728,7 +640,7 @@ def b10010110():  # SUB A,(HL) / SUB M
 
 def b10010000():  # SUB A,SSS / SUB S
     global pc, ticks
-    sub_a(globals()[regs_lst[opcode & 0b111]][0])
+    sub_a(reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 4
     return
@@ -744,7 +656,7 @@ def b10011110():  # SBC A,(HL) / SBB M
 
 def b10011000():  # SBC A,SSS / SBB S
     global pc, ticks
-    sbc_a(globals()[regs_lst[opcode & 0b111]][0])
+    sbc_a(reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 4
     return
@@ -760,7 +672,7 @@ def b10100110():  # AND A,(HL) / ANA M
 
 def b10100000():  # AND A,SSS / ANA S
     global pc, ticks
-    and_a(globals()[regs_lst[opcode & 0b111]][0])
+    and_a(reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 4
     return
@@ -776,7 +688,7 @@ def b10101110():  # XOR A,(HL) / XRA M
 
 def b10101000():  # XOR A,SSS / XRA S
     global pc, ticks
-    xor_a(globals()[regs_lst[opcode & 0b111]][0])
+    xor_a(reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 4
     return
@@ -792,7 +704,7 @@ def b10110110():  # OR A,(HL) / ORA M
 
 def b10110000():  # OR A,SSS / ORA S
     global pc, ticks
-    or_a(globals()[regs_lst[opcode & 0b111]][0])
+    or_a(reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 4
     return
@@ -808,7 +720,7 @@ def b10111110():  # CP (HL) / CMP M
 
 def b10111000():  # CP SSS / CMP S
     global pc, ticks
-    cp_a(globals()[regs_lst[opcode & 0b111]][0])
+    cp_a(reg_list[1 ^ (opcode % 0b1000)])
     pc = inc_pc()
     ticks += 4
     return
@@ -818,7 +730,7 @@ def b10111000():  # CP SSS / CMP S
 
 def b11000000():  # RET CCC / RCCC
     global pc, ticks, sp
-    if globals()[conditions[(opcode & 0b110000) >> 4]] == bool(opcode & 0b001000):
+    if get_conditions((opcode & 0b110000) >> 4) == bool(opcode & 0b001000):
         pc = read_mem(sp) + read_mem((sp + 1) % 0x10000) * 256
         sp = (sp + 2) % 0x10000
         ticks += 11
@@ -831,7 +743,7 @@ def b11000000():  # RET CCC / RCCC
 
 def b11000001():  # POP RP / POP R
     global pc, ticks, sp
-    globals()[regs_pairs[(opcode & 0b110000) >> 4]][0] = read_mem((sp + 1) % 0x10000) * 256 + read_mem(sp)
+    rp_list[(opcode & 0b110000) >> 4] = read_mem((sp + 1) % 0x10000) * 256 + read_mem(sp)
     sp = (sp + 2) % 0x10000
     ticks += 10
     pc = inc_pc()
@@ -874,7 +786,7 @@ def b11111001():  # LD SP,HL / SPHL
 
 def b11000010():  # JP CCC,nn / JCCC nn
     global pc, ticks
-    if globals()[conditions[(opcode & 0b110000) >> 4]] == bool(opcode & 0b001000):
+    if get_conditions((opcode & 0b110000) >> 4) == bool(opcode & 0b001000):
         pc = read_mem(inc_pc()) + read_mem(inc_pc(2)) * 256
         ticks += 10
         return
@@ -893,7 +805,7 @@ def b11000011():  # JP nn / JMP nn
 
 def b11010011():  # OUT (d),A / OUT d
     global pc, ticks
-    byte2port(reg_a[0] * 256 + read_mem(inc_pc()), reg_a[0])
+    write_port(reg_a[0] * 256 + read_mem(inc_pc()), reg_a[0])
     pc = inc_pc(2)
     ticks += 10
     return
@@ -911,8 +823,8 @@ def b11100011():  # EX (SP),HL / XTHL
     global pc, ticks
     reg_templ = read_mem(sp)
     reg_temph = read_mem((sp + 1) % 0x10000)
-    byte2mem(sp, reg_l[0])
-    byte2mem((sp + 1) % 0x10000, reg_h[0])
+    write_mem(sp, reg_l[0])
+    write_mem((sp + 1) % 0x10000, reg_h[0])
     reg_l[0] = reg_templ
     reg_h[0] = reg_temph
     pc = inc_pc()
@@ -945,10 +857,10 @@ def b11111011():  # EI /EI
 def b11000100():  # CALL CCC,nn / CCCC,nn
     global pc, ticks, sp
     reg_temp = inc_pc(3)
-    if globals()[conditions[(opcode & 0b110000) >> 4]] == bool(opcode & 0b001000):
+    if get_conditions((opcode & 0b110000) >> 4) == bool(opcode & 0b001000):
         sp = (sp - 2) % 0x10000
-        byte2mem(sp, reg_temp % 256)
-        byte2mem((sp + 1) % 0x10000, reg_temp // 256)
+        write_mem(sp, reg_temp % 256)
+        write_mem((sp + 1) % 0x10000, reg_temp // 256)
         pc = read_mem(inc_pc()) + read_mem(inc_pc(2)) * 256
         ticks += 17
         return
@@ -961,9 +873,9 @@ def b11000100():  # CALL CCC,nn / CCCC,nn
 def b11000101():  # PUSH RP / PUSH R
     global pc, ticks, sp
     sp = (sp - 2) % 0x10000
-    index = regs_pairs[(opcode & 0b110000) >> 4]
-    byte2mem(sp, globals()[index][0] % 256)
-    byte2mem((sp + 1) % 0x10000, globals()[index][0] // 256)
+    index = (opcode & 0b110000) >> 4
+    write_mem(sp, rp_list[index] % 256)
+    write_mem((sp + 1) % 0x10000, rp_list[index] // 256)
     pc = inc_pc()
     ticks += 11
     return
@@ -973,8 +885,8 @@ def b11110101():  # PUSH AF / PUSH PSW
     global pc, ticks, sp
     sp = (sp - 2) % 0x10000
     flags2f()
-    byte2mem(sp, reg_f[0])
-    byte2mem((sp + 1) % 0x10000, reg_a[0])
+    write_mem(sp, reg_f[0])
+    write_mem((sp + 1) % 0x10000, reg_a[0])
     pc = inc_pc()
     ticks += 11
     return
@@ -984,8 +896,8 @@ def b11001101():  # CALL nn / CALL nn
     global pc, ticks, sp
     sp = (sp - 2) % 0x10000
     reg_temp = inc_pc(3)
-    byte2mem(sp, reg_temp % 256)
-    byte2mem((sp + 1) % 0x10000, reg_temp // 256)
+    write_mem(sp, reg_temp % 256)
+    write_mem((sp + 1) % 0x10000, reg_temp // 256)
     pc = read_mem(inc_pc()) + read_mem(inc_pc(2)) * 256
     ticks += 17
     return
@@ -1059,8 +971,8 @@ def b11000111():  # RST N / RST N
     global pc, ticks, sp
     sp = (sp - 2) % 0x10000
     reg_temp = inc_pc()
-    byte2mem(sp, reg_temp % 256)
-    byte2mem((sp + 1) % 0x10000, reg_temp // 256)
+    write_mem(sp, reg_temp % 256)
+    write_mem((sp + 1) % 0x10000, reg_temp // 256)
     pc = ((opcode & 0b00111000) >> 3) * 8
     ticks += 11
     return
@@ -1135,7 +1047,6 @@ opcodes = {0x00: b00000000, 0x08: b00000000, 0x10: b00000000, 0x18: b00000000,
            0xE7: b11000111, 0xEF: b11000111, 0xF7: b11000111, 0xFF: b11000111}
 
 
-
 def core():
     global opcode
     opcode = memory[pc]
@@ -1162,15 +1073,15 @@ if __name__ == '__main__':
     # flag_z = True
     # flag_s = True
 
-    reg_a[0] = 0x08
-    reg_b[0] = 0x1d
+    reg_a[0] = 0x00
+    reg_b[0] = 0x80
     reg_c[0] = 0x00
-    reg_d[0] = 0x80
+    reg_d[0] = 0x00
     reg_e[0] = 0x00
-    reg_h[0] = 0xff
+    reg_h[0] = 0x00
     reg_l[0] = 0x00
 
-    fill_memory([0x21, 0xff, 0xff])
+    fill_memory([0x00, 0xff, 0xff, 0x00, 0x00, 0x00])
 
     display_regs()
     core()
