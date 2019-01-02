@@ -32,7 +32,13 @@ To load another game put RKS file beside emulator files then change GAME constan
 
 * Low emulation speed due to general Python speed
 * There is no sound emulation
-* Keyboard test by S.Ryumik doesn't pass
+
+## Thanks (in alphabetical order)
+
+ivagor
+Q-Master
+[svofski](https://github.com/svofski "svofski")
+Titus
 
 ## Screenshots
 
@@ -40,6 +46,11 @@ To load another game put RKS file beside emulator files then change GAME constan
 ![Chess](https://pic.maxiol.com/images/1545567716.90463878.chess.png "Chess") ![Basic](https://pic.maxiol.com/images/1545798471.3254906935.chessbasic.png "Basic")
 
 ## Versions
+
+v0.4 (2nd January, 2019)
+- Code optimization
+- Video optimization by svofski
+- Keybord routine by ivagor
 
 v0.3 (31st December, 2018)
 - Great speed up due to screen update optimization
