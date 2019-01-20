@@ -47,6 +47,10 @@ To load another game put RKS file beside emulator files then change GAME constan
 
 ## Versions
 
+v0.5 (20th January, 2019)
+- Code optimization
+- Keybord routine fixed
+
 v0.4 (2nd January, 2019)
 - Code optimization
 - Video optimization by svofski
