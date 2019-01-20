@@ -5,13 +5,8 @@
 # (C) Stanislav Yudin (CityAceE)
 # http://zx-pk.ru
 
-
-vv55a_mode = 0x82
-kb_ports = bytearray([0x00, 0x00, 0xf0])
-kb_mem = bytearray([0x00, 0x00, 0x00])
-
 keys = {
-   # Key [   C O L U M N    ] [  R O W  ]
+  # Key  [   C O L U M N    ] [  R O W  ]
     282: [0b1000, 0b00000000, 0b10000000],  # F - F1
     283: [0b0100, 0b00000000, 0b10000000],  # HELP - F2
     284: [0b0010, 0b00000000, 0b10000000],  # NEW - F3
@@ -25,18 +20,18 @@ keys = {
     292: [0b0000, 0b00000010, 0b10000000],  # ТФ - F11
     293: [0b0000, 0b00000001, 0b10000000],  # НФ - F12
 
-    61: [0b1000, 0b00000000, 0b01000000],  # ; + - +
-    49: [0b0100, 0b00000000, 0b01000000],  # 1 ! - 1
-    50: [0b0010, 0b00000000, 0b01000000],  # 2 " - 2
-    51: [0b0001, 0b00000000, 0b01000000],  # 3 # - 3
-    52: [0b0000, 0b10000000, 0b01000000],  # 4 $ - 4
-    53: [0b0000, 0b01000000, 0b01000000],  # 5 % - 5
-    54: [0b0000, 0b00100000, 0b01000000],  # 6 & - 6
-    55: [0b0000, 0b00010000, 0b01000000],  # 7 ' - 7
-    56: [0b0000, 0b00001000, 0b01000000],  # 8 ( - 8
-    57: [0b0000, 0b00000100, 0b01000000],  # 9 ) - 9
-    48: [0b0000, 0b00000010, 0b01000000],  # 0 - 0
-    45: [0b0000, 0b00000001, 0b01000000],  # - = - -
+    61:  [0b1000, 0b00000000, 0b01000000],  # ; + - +
+    49:  [0b0100, 0b00000000, 0b01000000],  # 1 ! - 1
+    50:  [0b0010, 0b00000000, 0b01000000],  # 2 " - 2
+    51:  [0b0001, 0b00000000, 0b01000000],  # 3 # - 3
+    52:  [0b0000, 0b10000000, 0b01000000],  # 4 $ - 4
+    53:  [0b0000, 0b01000000, 0b01000000],  # 5 % - 5
+    54:  [0b0000, 0b00100000, 0b01000000],  # 6 & - 6
+    55:  [0b0000, 0b00010000, 0b01000000],  # 7 ' - 7
+    56:  [0b0000, 0b00001000, 0b01000000],  # 8 ( - 8
+    57:  [0b0000, 0b00000100, 0b01000000],  # 9 ) - 9
+    48:  [0b0000, 0b00000010, 0b01000000],  # 0 - 0
+    45:  [0b0000, 0b00000001, 0b01000000],  # - = - -
 
     113: [0b1000, 0b00000000, 0b00100000],  # Й J - Й
     119: [0b0100, 0b00000000, 0b00100000],  # Ц C - Ц
@@ -77,8 +72,8 @@ keys = {
     303: [0b0000, 0b00000010, 0b00001000],  # / ? - Right Shift
     8:   [0b0000, 0b00000001, 0b00001000],  # ЗБ - Backspace
 
-    301: [0b1000, 0b00000000, 0b00000100],  # НРФ - CapsLock
-    277: [0b0100, 0b00000000, 0b00000100],  # HOME - Home
+    306: [0b1000, 0b00000000, 0b00000100],  # НРФ - Left Ctrl
+    278: [0b0100, 0b00000000, 0b00000100],  # HOME - Home
     273: [0b0010, 0b00000000, 0b00000100],  # ВВЕРХ - Up
     274: [0b0001, 0b00000000, 0b00000100],  # ВНИЗ - Down
     000: [0b0000, 0b10000000, 0b00000100],  #
@@ -92,43 +87,62 @@ keys = {
 
     304: [0b0000, 0b00000000, 0b00000010]}  # НР - Left Shift
 
+vv55a_mode = 0x82
+kb_mem = bytearray([0x00, 0x00, 0x00])
+kb_matrix = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], 0]
+
 
 def keydown(code):
     if code in keys:
-        kb_ports[0] |= keys[code][1]
-        kb_ports[1] |= keys[code][2]
-        kb_ports[2] |= keys[code][0]
+        i = {2: 6, 4: 5, 8: 4, 16: 3, 32: 2, 64: 1, 128: 0}[keys[code][2]]
+        kb_matrix[i][0] |= keys[code][0]
+        kb_matrix[i][1] |= keys[code][1]
+        kb_matrix[7] |= keys[code][2]
 
 
 def keyup(code):
     if code in keys:
-        kb_ports[0] &= 0xff - keys[code][1]
-        kb_ports[1] &= 0xff - keys[code][2]
-        kb_ports[2] &= 0xff - keys[code][0]
+        i = {2: 6, 4: 5, 8: 4, 16: 3, 32: 2, 64: 1, 128: 0}[keys[code][2]]
+        kb_matrix[i][0] &= 0xff - keys[code][0]
+        kb_matrix[i][1] &= 0xff - keys[code][1]
+        kb_matrix[7] &= 0xff - keys[code][2]
+
+
+def get_port_91(mem, matrix):
+    byte = 0
+    mask = 128
+    for i in range(7):
+        if kb_mem[mem] & mask:
+            byte |= kb_matrix[i][matrix]
+        mask //= 2
+    return 0xff - byte
+
+
+def get_port_82(mem, matrix):
+    byte = 0
+    mask = 128
+    for i in range(7):
+        if kb_mem[mem] & kb_matrix[i][matrix]:
+            byte += mask
+        mask //= 2
+    return byte
 
 
 def read_kb_ports(addr):
     if vv55a_mode == 0x91:
         if not (addr % 4):
-            if kb_ports[1] & kb_mem[1]:
-                return 0xff - kb_ports[0]
-            else:
-                return 0xff
+            return get_port_91(1, 1)
         elif addr % 4 == 1:
             return 0xff - kb_mem[1]
         elif addr % 4 == 2:
-            if kb_ports[1] & kb_mem[1]:
-                return 0xff - kb_ports[2]
-            else:
-                return 0x0f
+            return get_port_91(1, 0) % 0x10
     elif vv55a_mode == 0x82:
         if not (addr % 4):
             return 0xff - kb_mem[0]
         elif addr % 4 == 1:
-            if kb_ports[0] & kb_mem[0] or (kb_ports[2] & kb_mem[2]) % 0x10:
-                return 0xff - kb_ports[1]
-            else:
-                return 0xff
+            byte = get_port_82(0, 1)
+            byte |= get_port_82(2, 0)
+            return 0xff - byte - (kb_matrix[7] & 2)
         elif addr % 4 == 2:
             return 0xff - kb_mem[2]
 
@@ -137,11 +151,9 @@ def write_kb_ports(addr, byte):
     global vv55a_mode
     if addr % 4 != 3:
         kb_mem[(addr % 4)] = 0xff - byte
-
     elif byte == 0x91:
         vv55a_mode = byte
         kb_mem[1] = 0xff
-
     elif byte == 0x82:
         vv55a_mode = byte
         kb_mem[0] = 0xff

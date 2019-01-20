@@ -5,7 +5,7 @@
 # (C) Stanislav Yudin (CityAceE)
 # http://zx-pk.ru
 #
-# ver.0.4, 2nd December 2019
+# ver.0.5, 20th January 2019
 
 import pygame
 import pygame.surfarray
@@ -17,6 +17,7 @@ import spyc_keyboard
 
 GAME = 'zoo.rks'
 ROM = 'system.rom'
+SHOW_FPS = True
 CPU_CLOCK = 2  # In MHz. Default Intel 8080 frequency is 2 MHz
 
 cpu.pc = spyc_loader.game(GAME)
@@ -27,7 +28,8 @@ debug = False
 running = True
 int_ticks = int(CPU_CLOCK * 1000000 / 50)
 screen = pygame.display.set_mode((384, 256), 0, 8)
-pygame.display.set_caption("sPycialist")
+caption = "sPycialist"
+pygame.display.set_caption(caption)
 
 
 def blitsurface():
@@ -57,8 +59,9 @@ try:
             cpu.ticks = 0
             blitsurface()
             pygame.display.flip()
-            clock.tick(50)
-        # END OF MAIN LOOP
+            clock.tick(52)
+
+            # END OF MAIN LOOP
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -67,6 +70,11 @@ try:
                     spyc_keyboard.keydown(event.key)
                 if event.type == pygame.KEYUP:
                     spyc_keyboard.keyup(event.key)
+
+            if SHOW_FPS:
+                fps = clock.get_fps()
+                with_fps = "{} - {:.2f} FPS".format(caption, fps)
+                pygame.display.set_caption(with_fps)
 
     pygame.quit()
 except SystemExit:

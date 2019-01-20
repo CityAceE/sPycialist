@@ -7,7 +7,6 @@
 
 import spyc_keyboard
 
-
 memory = memoryview(bytearray(65536))
 
 ticks = 0  # Ticks number since interrupt
@@ -52,6 +51,7 @@ for i in range(256):
 h_table = (False, False, True, False, True, False, True, True)
 sub_h_table = (False, True, True, True, False, False, False, True)
 
+
 def write_mem(addr, byte):
     # Write one byte to memory address
     # ROM write blocking and memory mapping here
@@ -69,7 +69,7 @@ def read_mem(addr):
     # Read one byte from memory address
     # Configure memory mapping here
 
-    # Specialist keyboard reading
+    # Specialist keyboard ports reading
     if addr < 0xf800:
         return memory[addr]
     else:
@@ -130,6 +130,8 @@ def dec2hex16(data):
 
 def dec2hex8(data):
     # Dec to hex visual converter: 0 -> #00
+    if data is None:
+        data = 255
     return ('%2s' % str(hex(data))[2:]).replace(' ', '0').upper()
 
 
@@ -142,7 +144,8 @@ def disp4b(data):
 def display_regs():
     # Display all registers
     flags2f()
-    print('AF:', dec2hex16(reg_af[0]), disp4b(reg_af[0]), '\t C =', int(flag_c))
+    af = reg_a[0] * 256 + reg_f[0]
+    print('AF:', dec2hex16(af), disp4b(af), '\t C =', int(flag_c))
     print('BC:', dec2hex16(reg_bc[0]), disp4b(reg_bc[0]), '\t Z =', int(flag_z))
     print('DE:', dec2hex16(reg_de[0]), disp4b(reg_de[0]), '\t P =', int(flag_p))
     print('HL:', dec2hex16(reg_hl[0]), disp4b(reg_hl[0]), '\t S =', int(flag_s))
@@ -1055,7 +1058,6 @@ def core():
 
 def fill_memory(codes):
     # Fill memory by codes
-    print(codes)
     i = 0
     for code in codes:
         memory[(pc + i) % 0x10000] = code
@@ -1074,14 +1076,14 @@ if __name__ == '__main__':
     # flag_s = True
 
     reg_a[0] = 0x00
-    reg_b[0] = 0x80
+    reg_b[0] = 0x00
     reg_c[0] = 0x00
     reg_d[0] = 0x00
     reg_e[0] = 0x00
     reg_h[0] = 0x00
     reg_l[0] = 0x00
 
-    fill_memory([0x00, 0xff, 0xff, 0x00, 0x00, 0x00])
+    fill_memory([0x21, 0x00, 0xf8, 0x00])
 
     display_regs()
     core()
