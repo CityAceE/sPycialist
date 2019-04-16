@@ -9,7 +9,7 @@ sPycialist is "Specialist" PC emulator written in Python. It uses my own realiza
 
 This Intel 8080 emulator successfully passes all tests of 8080/8085 CPU Exerciser.
 
-![8080/8085 CPU Exerciser](https://raw.githubusercontent.com/CityAceE/sPycialist/master/cpu_exerciser_1.png) ![8080/8085 CPU Exerciser](https://raw.githubusercontent.com/CityAceE/sPycialist/master/cpu_exerciser_2.png)
+![8080/8085 CPU Exerciser](https://raw.githubusercontent.com/CityAceE/sPycialist/master/screenshots/cpu_exerciser_1.png) ![8080/8085 CPU Exerciser](https://raw.githubusercontent.com/CityAceE/sPycialist/master/screenshots/cpu_exerciser_2.png)
 
 ## Requirements
 
@@ -42,8 +42,8 @@ To load another game put RKS file beside emulator files then change GAME constan
 
 ## Screenshots
 
-![ZOO](https://pic.maxiol.com/images/1546225871.90463878.zoo.gif "ZOO Game") ![Gold](https://pic.maxiol.com/images/1546247169.90463878.gold.gif "Gold Game")<br>
-![Chess](https://pic.maxiol.com/images/1545567716.90463878.chess.png "Chess") ![Basic](https://pic.maxiol.com/images/1545798471.3254906935.chessbasic.png "Basic")
+![ZOO](https://raw.githubusercontent.com/CityAceE/sPycialist/master/screenshots/zoo.gif "ZOO Game") ![Gold](https://raw.githubusercontent.com/CityAceE/sPycialist/master/screenshots/gold.gif "Gold Game")<br>
+![Chess](https://raw.githubusercontent.com/CityAceE/sPycialist/master/screenshots/chess.png "Chess") ![Basic](https://raw.githubusercontent.com/CityAceE/sPycialist/master/screenshots/basic.png "Basic")
 
 ## Versions
 
