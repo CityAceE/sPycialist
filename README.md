@@ -9,7 +9,7 @@ sPycialist is "Specialist" PC emulator written in Python. It uses my own realiza
 
 This Intel 8080 emulator successfully passes all tests of 8080/8085 CPU Exerciser.
 
-![8080/8085 CPU Exerciser](https://raw.githubusercontent.com/CityAceE/sPycialist/master/cpu_exerciser_1.png "8080/8085 CPU Exerciser") ![8080/8085 CPU Exerciser](https://raw.githubusercontent.com/CityAceE/sPycialist/master/cpu_exerciser_1.png "8080/8085 CPU Exerciser")
+![8080/8085 CPU Exerciser](https://raw.githubusercontent.com/CityAceE/sPycialist/master/cpu_exerciser_1.png) ![8080/8085 CPU Exerciser](https://raw.githubusercontent.com/CityAceE/sPycialist/master/cpu_exerciser_2.png)
 
 ## Requirements
 
